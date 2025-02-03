@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quoty-flow"
+version = "0.1.0"
+description = "Quoty flow using dagster"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "Apache-2.0" }
+authors = [{ name = "JieShuang", email = "jshuangzl@gmail.com" }]
+dependencies = [
+    "dagster",
+    "dagster-cloud",
+    "boto3",
+    "dagster-airbyte",
+    "dagster-dbt",
+    "dagster-postgres",
+    "pandas",
+    "numpy",
+    "scipy",
+    "dbt-core",
+    "dbt-postgres",
+    "packaging",
+]
+
+[project.optional-dependencies]
+dev = [
+    "dagster-webserver",
+    "pytest",
+    "jupyterlab",        # 推荐添加的dev工具
+]
+test = ["dbt-postgres<1.8.0", "pytest-cov"]
+
+[tool.setuptools]
+packages = ["src.quoty_flow"]
+package-data = { "quoty_flow" = ["dbt_project/**/*"] }
+
+[tool.dagster]
+code_location_name = "src.quoty_flow"      # 代码库名称
+module_name = "src.quoty_flow.definitions" # 入口模块

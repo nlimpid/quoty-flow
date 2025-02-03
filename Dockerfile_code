@@ -1,0 +1,17 @@
+FROM python:3.12-slim
+
+# Checkout and install dagster libraries needed to run the gRPC server
+# exposing your repository to dagster-webserver and dagster-daemon, and to load the DagsterInstance
+# Add repository code
+WORKDIR /app
+
+COPY . .
+RUN pip install -e ".[dev]"
+# Run dagster gRPC server on port 4000
+
+EXPOSE 4000
+
+ENV DAGSTER_HOME=/app
+ENV DAGSTER_GRPC_PORT=4000
+
+CMD ["dagster", "api", "grpc", "-h", "0.0.0.0", "-p", "4000", "-f", "src/quoty_flow/definitions.py"]

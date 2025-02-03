@@ -1,0 +1,56 @@
+# .gitignore
+
+# 虚拟环境目录
+.venv/
+venv/
+env/
+
+# Python 编译缓存和字节码
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 包构建和分发文件
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# 开发工具配置
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.coverage.*
+.tox/
+
+# 本地环境文件
+.env
+.env.local
+.env.development
+.env.test
+
+# IDE 配置文件
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 日志和临时文件
+*.log
+*.tmp
+*.bak
+
+# 测试生成的文件
+test_output/
+results/
+
+# Jupyter Notebook 缓存
+.ipynb_checkpoints/
+
+# macOS 系统文件
+.DS_Store
+
+# Windows 系统文件
+Thumbs.db

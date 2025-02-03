@@ -1,0 +1,8 @@
+load_from:
+  # Each entry here corresponds to a service in the docker-compose file that exposes user code.
+  - python_module:
+      module_name: src.quoty_flow.definitions
+  - grpc_server:
+      host: code-location
+      port: 4000
+      location_name: "src.quoty_flow"
