@@ -1,12 +1,19 @@
-from dagster import (
+import pandas as pd
+from dagster import RunConfig, asset, Output, EnvVar
+from dagster import AssetExecutionContext  # 新增导入
+from dagster import (  # type: ignore
     get_dagster_logger,
     job,
+    load_assets_from_modules,
     op,
     resource,
     InitResourceContext,
     Definitions
 )
 import os
+
+from .io_managers.deltalake_io import S3DeltaResource
+from .resources.s3 import S3StorageConfig
 
 
 @resource(config_schema={"hostname": str, "username": str, "password": str, "db_name": str})
@@ -54,7 +61,47 @@ def debug_job():
     process_data(check_config())
 
 
+@asset(required_resource_keys={"delta_io"})
+def iris_dataset(context: AssetExecutionContext) -> pd.DataFrame:
+    df = pd.read_csv(
+        "https://docs.dagster.io/assets/iris.csv",
+        names=[
+            "sepal_length_cm",
+            "sepal_width_cm",
+            "petal_length_cm",
+            "petal_width_cm",
+            "species",
+        ],
+    )
+
+    # 显式调用 delta resource 的写入方法
+
+    context.resources.delta_io.write_table(
+        df,
+        table_name="iris_dataset",
+        mode="overwrite"
+    )
+
+    return df  # 保持返回 DataFrame 供下游使用（可选）
+
+
+# 从环境变量创建配置
+s3_config = S3StorageConfig(
+    access_key=EnvVar("S3_ACCESS_KEY_ID"),
+    secret_key=EnvVar("S3_SECRET_KEY"),
+    bucket=EnvVar("S3_BUCKET"),
+    region=EnvVar("S3_REGION"),
+    endpoint_url=EnvVar("S3_ENDPOINT_URL"),
+    use_ssl=EnvVar("S3_USE_SSL") == "true"
+)
+
 # 定义代码库
 defs = Definitions(
-    jobs=[debug_job]
+    # assets=[*load_assets_from_modules([assets])],
+    assets=[iris_dataset],
+    jobs=[debug_job],
+    resources={
+        "s3": s3_config,
+        "delta_io": S3DeltaResource(credentials=s3_config)
+    }
 )

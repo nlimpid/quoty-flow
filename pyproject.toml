@@ -23,6 +23,9 @@ dependencies = [
     "dbt-core",
     "dbt-postgres",
     "packaging",
+    "dagster-deltalake",
+    "dagster-deltalake-pandas",
+    "dagster-aws",
 ]
 
 [project.optional-dependencies]
