@@ -29,11 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "dagster-webserver",
-    "pytest",
-    "jupyterlab",        # 推荐添加的dev工具
-]
+dev = ["dagster-webserver", "pytest", "pytest-cov", "jupyterlab"]
 test = ["dbt-postgres<1.8.0", "pytest-cov"]
 
 [tool.setuptools]
@@ -43,3 +39,9 @@ package-data = { "quoty_flow" = ["dbt_project/**/*"] }
 [tool.dagster]
 code_location_name = "src.quoty_flow"      # 代码库名称
 module_name = "src.quoty_flow.definitions" # 入口模块
+
+
+[tool.pytest.ini_options]
+testpaths = ["quoty_flow_tests"]
+python_files = ["test_*.py"]
+addopts = "-v"

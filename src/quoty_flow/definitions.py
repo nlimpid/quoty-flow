@@ -12,6 +12,10 @@ from dagster import (  # type: ignore
 )
 import os
 
+from .resources.hkex import HKEXScraperResource
+from .assets.hkex import check_bond_data_quality, raw_bond_data, staged_bond_data, published_bond_data
+from .assets import hkex
+
 from .io_managers.deltalake_io import S3DeltaResource
 from .resources.s3 import S3StorageConfig
 
@@ -95,13 +99,22 @@ s3_config = S3StorageConfig(
     use_ssl=EnvVar("S3_USE_SSL") == "true"
 )
 
+assets_modules = [*load_assets_from_modules([hkex])]
+
 # 定义代码库
 defs = Definitions(
     # assets=[*load_assets_from_modules([assets])],
-    assets=[iris_dataset],
+    assets=[
+        *assets_modules,
+        iris_dataset
+    ],
+    asset_checks=[
+        check_bond_data_quality
+    ],
     jobs=[debug_job],
     resources={
         "s3": s3_config,
-        "delta_io": S3DeltaResource(credentials=s3_config)
+        "delta_io": S3DeltaResource(credentials=s3_config),
+        "hkex_scraper": HKEXScraperResource()
     }
 )
