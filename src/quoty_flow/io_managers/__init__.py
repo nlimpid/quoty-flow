@@ -11,9 +11,9 @@ class S3DeltaIOManager(DeltaLakeIOManager):
             storage_options={
                 "AWS_ACCESS_KEY_ID": config.access_key,
                 "AWS_SECRET_ACCESS_KEY": config.secret_key,
-                "AWS_REGION": config.region
+                "AWS_REGION": config.region,
             },
-            schema="public"  # default
+            schema="public",  # default
         )
 
     def handle_output(self, context: OutputContext, obj: pd.DataFrame):

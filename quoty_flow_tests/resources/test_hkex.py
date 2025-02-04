@@ -3,8 +3,7 @@ import pytest
 from src.quoty_flow.resources.hkex import HKEXScraperResource
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -30,8 +29,7 @@ def test_scrape_real_pages(scraper):
     """测试实际页面爬取"""
     # 测试 iBond 页面
     ibond_results = scraper.scrape_page(
-        "https://www.hkgb.gov.hk/en/retail/iBond_Rates.html",
-        "iBond"
+        "https://www.hkgb.gov.hk/en/retail/iBond_Rates.html", "iBond"
     )
     logger.info(f"ibond_results: {ibond_results}")
     assert len(ibond_results) > 0
@@ -39,8 +37,7 @@ def test_scrape_real_pages(scraper):
 
     # 测试 GreenBond 页面
     green_results = scraper.scrape_page(
-        "https://www.hkgb.gov.hk/en/greenbond/retail_Rates.html",
-        "GreenBond"
+        "https://www.hkgb.gov.hk/en/greenbond/retail_Rates.html", "GreenBond"
     )
     assert len(green_results) > 0
     assert all(r["bond_type"] == "GreenBond" for r in green_results)
