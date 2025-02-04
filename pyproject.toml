@@ -27,10 +27,11 @@ dependencies = [
     "dagster-deltalake-pandas",
     "dagster-aws",
     "pydantic",
+    "yfinance",
 ]
 
 [project.optional-dependencies]
-dev = ["dagster-webserver", "pytest", "pytest-cov", "jupyterlab"]
+dev = ["dagster-webserver", "pytest", "pytest-cov", "jupyterlab", "yfinance"]
 test = ["dbt-postgres<1.8.0", "pytest-cov"]
 
 [tool.setuptools]

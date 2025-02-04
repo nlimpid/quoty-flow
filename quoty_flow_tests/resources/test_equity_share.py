@@ -1,3 +1,4 @@
+import json
 import pytest
 from src.quoty_flow.resources.equity_share import (
     YahooFinanceResource,
@@ -80,7 +81,7 @@ def test_nasdaq_screener_get_shares(nasdaq_screener, current_dt):
     """测试 Nasdaq Screener 数据获取"""
     console.rule("[bold red]Testing Nasdaq Screener")
 
-    results = nasdaq_screener.get_equity_shares(current_dt)
+    results = nasdaq_screener.get_equity_shares()
 
     # 验证结果
     assert len(results) > 0, "应该返回至少一条数据"
@@ -179,3 +180,33 @@ def test_data_consistency(yahoo_finance, nasdaq_screener, orbisfn, current_dt):
             # )
 
         console.print(table)
+
+
+def test_get_screener_data():
+    resource = NasdaqScreenerResource()
+
+    # 测试单页获取
+    response = resource._get_screener_data(limit=5, offset=0)
+    # response = json.loads(data)
+    logger.info(f"Screener Data: {response['data']['rows'][0]}")
+
+    assert "data" in response
+    assert "rows" in response["data"]
+    assert len(response["data"]["rows"]) >= 5
+
+
+def test_get_all_screener_data():
+    resource = NasdaqScreenerResource()
+
+    # 测试多页获取
+    all_data = resource.get_all_screener_data(page_size=100)
+
+    assert isinstance(all_data, list)
+    assert len(all_data) > 0
+    logger.info(f"All Data: {all_data.shape()}")
+
+    # 检查数据结构
+    first_item = all_data[0]
+    assert "symbol" in first_item
+    assert "lastsale" in first_item
+    assert "marketCap" in first_item

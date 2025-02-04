@@ -62,3 +62,36 @@ def orbisfn_shares(
     )
 
     return shares_df
+
+
+@asset(
+    required_resource_keys={"yahoo_finance", "orbisfn", "delta_io"},
+    description="Yahoo Finance 股本数据",
+    deps=["orbisfn_eod"],  # 添加依赖
+)
+def yahoo_shares(
+    context: AssetExecutionContext,
+    orbisfn_eod: pd.DataFrame,
+) -> pd.DataFrame:
+    """从 Yahoo Finance 获取股本数据"""
+    try:
+        # 从 orbisfn_eod 获取股票列表
+        symbols = orbisfn_eod["SYMBOL"].drop_duplicates()
+        # logger.info(f"Symbols: {len(symbols)}")
+
+        # 使用 yahoo finance 获取股本数据
+        df = context.resources.yahoo_finance.get_equity_shares(
+            symbols, orbisfn_eod["dt"].iloc[0]
+        )
+
+        # 写入 delta lake
+        r_delta: S3DeltaResource = context.resources.delta_io
+        r_delta.write_table(
+            df, table_name="yahoo_shares", mode="overwrite", partition_by=["dt"]
+        )
+
+        return df
+
+    except Exception as e:
+        context.log.error(f"Error in yahoo_shares asset: {e}")
+        return pd.DataFrame()  # 返回空 DataFrame 而不是抛出异常

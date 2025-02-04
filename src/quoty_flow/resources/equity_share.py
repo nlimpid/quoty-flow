@@ -1,3 +1,4 @@
+import asyncio
 from dagster import ConfigurableResource, get_dagster_logger
 import httpx
 import json
@@ -9,6 +10,7 @@ import pandas as pd
 from ..models.equity_share import EquityShare
 from concurrent.futures import ThreadPoolExecutor
 import pytz
+import yfinance as yf
 
 logger = get_dagster_logger()
 
@@ -16,17 +18,18 @@ logger = get_dagster_logger()
 class YahooFinanceResource(ConfigurableResource):
     """Yahoo Finance API 资源"""
 
-    batch_size: int = 50
-    max_workers: int = 10
+    batch_size: int = 100
+    max_workers: int = 3
 
-    def get_equity_shares(self, symbols: List[str], dt: datetime) -> List[EquityShare]:
+    def get_equity_shares(self, symbols: pd.Series, dt: str) -> pd.DataFrame:
         """获取股本数据"""
         results = []
         # 分批处理
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = []
+            # 使用 Series 的 iloc 进行切片
             for i in range(0, len(symbols), self.batch_size):
-                batch = symbols[i : i + self.batch_size]
+                batch = symbols.iloc[i : i + self.batch_size]
                 futures.append(
                     executor.submit(self._get_batch_equity_shares, batch, dt)
                 )
@@ -40,19 +43,49 @@ class YahooFinanceResource(ConfigurableResource):
 
         return results
 
-    def _get_batch_equity_shares(
-        self, symbols: List[str], dt: datetime
-    ) -> List[EquityShare]:
+    def _get_batch_equity_shares(self, symbols: List[str], dt: str) -> pd.DataFrame:
         """获取一批股票的股本数据"""
-        # TODO: 实现 Yahoo Finance API 调用
-        # 这里需要替换成实际的 Yahoo Finance API 实现
-        return []
+        try:
+            # Get data for batch of symbols
+            tickers = yf.Tickers(" ".join(symbols))
+
+            # 创建空的 DataFrame，预先定义好列
+            df = pd.DataFrame(columns=["symbol", "shares", "source", "dt"])
+
+            for symbol, ticker in tickers.tickers.items():
+                try:
+                    info = ticker.fast_info
+                    # 创建单行数据
+                    row = pd.DataFrame(
+                        [
+                            {
+                                "symbol": symbol,
+                                "shares": info.shares,
+                                "source": "yahoo",
+                                "dt": dt,
+                            }
+                        ]
+                    )
+                    # 追加到主 DataFrame
+                    df = pd.concat([df, row], ignore_index=True)
+                except Exception as e:
+                    logger.warning(f"Error getting data for {symbol}: {e}")
+                    continue
+
+            if df.empty:
+                return pd.DataFrame(columns=["symbol", "shares", "source", "dt"])
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error in batch Yahoo Finance request: {e}")
+            return pd.DataFrame()
 
 
 class NasdaqScreenerResource(ConfigurableResource):
     """Nasdaq Screener 爬虫资源"""
 
-    def get_equity_shares(self, dt: datetime) -> List[EquityShare]:
+    def get_equity_shares(self) -> List[EquityShare]:
         """获取股本数据"""
         try:
             # 获取原始数据
@@ -90,10 +123,25 @@ class NasdaqScreenerResource(ConfigurableResource):
             logger.error(f"Error getting Nasdaq data: {e}")
             raise
 
-    def _get_screener_data(self) -> str:
-        """获取 Nasdaq Screener 数据"""
+    async def _get_screener_data(
+        self, limit: int = 100, offset: int = 0, client: httpx.AsyncClient = None
+    ) -> str:
+        """获取 Nasdaq Screener 数据
+
+        Args:
+            limit: 每页数量，默认25
+            offset: 偏移量，默认0
+
+        Returns:
+            str: JSON 格式的响应数据
+        """
         url = "https://api.nasdaq.com/api/screener/stocks"
-        params = {"tableonly": "true", "limit": 25, "offset": 0, "download": "true"}
+        params = {
+            "tableonly": "true",
+            "limit": limit,
+            "offset": offset,
+            "download": "true",
+        }
         headers = {
             "Authority": "api.nasdaq.com",
             "Accept": "application/json",
@@ -102,10 +150,58 @@ class NasdaqScreenerResource(ConfigurableResource):
             "Referer": "https://www.nasdaq.com/",
         }
 
-        with httpx.Client(verify=False) as client:
-            response = client.get(url, params=params, headers=headers)
-            response.raise_for_status()
-            return response.text
+        response = await client.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        # 直接转换为 DataFrame
+        return pd.DataFrame(data.get("data", {}).get("rows", []))
+
+    def get_all_screener_data(self, page_size: int = 100) -> pd.DataFrame:
+        """获取所有 Nasdaq Screener 数据
+
+        Args:
+            page_size: 每页数量，默认25
+
+        Returns:
+            pd.DataFrame: 所有股票数据表格
+        """
+
+        async def _fetch_all():
+            all_dfs = []
+            offset = 0
+
+            async with httpx.AsyncClient(verify=False) as client:
+                while True:
+                    try:
+                        df = await self._get_screener_data(
+                            limit=page_size, offset=offset, client=client
+                        )
+
+                        if df.empty:
+                            break
+                        if len(df) < page_size:
+                            break
+
+                        all_dfs.append(df)
+                        offset += page_size
+
+                        # 可选：添加日志
+                        logger.info(
+                            f"Retrieved {len(df)} rows, total: {sum(len(df) for df in all_dfs)}"
+                        )
+
+                    except Exception as e:
+                        logger.error(f"Error fetching page at offset {offset}: {e}")
+                        break
+
+            # 合并所有 DataFrame
+            if not all_dfs:
+                return pd.DataFrame()
+
+            return pd.concat(all_dfs, ignore_index=True)
+
+        return asyncio.run(_fetch_all())
 
 
 class OrbisfnResource(ConfigurableResource):

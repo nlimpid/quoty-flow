@@ -21,7 +21,7 @@ from .assets.hkex import (
 )
 from .assets import hkex, equity_share
 
-from .resources.equity_share import OrbisfnResource
+from .resources.equity_share import OrbisfnResource, YahooFinanceResource
 
 
 from .io_managers.deltalake_io import S3DeltaResource
@@ -138,7 +138,7 @@ defs = Definitions(
         # "share_capital_source4": ShareCapitalSource4Resource(),
         # "share_capital_diff": ShareCapitalDiffResource(),
         # # 添加股本数据源
-        # "yahoo_finance": YahooFinanceResource(batch_size=50, max_workers=10),
+        "yahoo_finance": YahooFinanceResource(batch_size=50, max_workers=10),
         # "nasdaq_screener": NasdaqScreenerResource(),
         "orbisfn": OrbisfnResource(),
     },
