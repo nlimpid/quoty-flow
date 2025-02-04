@@ -12,20 +12,20 @@ from dagster import (  # type: ignore
 )
 import os
 
-from .resources.hkex import HKEXScraperResource
-from .assets.hkex import (
+from src.quoty_flow.resources.hkex import HKEXScraperResource
+from src.quoty_flow.assets.hkex import (
     check_bond_data_quality,
     raw_bond_data,
     staged_bond_data,
     published_bond_data,
 )
-from .assets import hkex, equity_share
+from src.quoty_flow.assets import hkex, equity_share
 
-from .resources.equity_share import OrbisfnResource, YahooFinanceResource
+from src.quoty_flow.resources.equity_share import OrbisfnResource, YahooFinanceResource
 
 
-from .io_managers.deltalake_io import S3DeltaResource
-from .resources.s3 import S3StorageConfig
+from src.quoty_flow.io_managers.deltalake_io import S3DeltaResource
+from src.quoty_flow.resources.s3 import S3StorageConfig
 
 # 定义日期分区
 daily_partitions = DailyPartitionsDefinition(

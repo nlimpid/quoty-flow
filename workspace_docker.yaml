@@ -1,0 +1,6 @@
+load_from:
+  # Each entry here corresponds to a service in the docker-compose file that exposes user code.
+  - grpc_server:
+      host: quoty-flow-code.zeabur.internal
+      port: 4000
+      location_name: "src.quoty_flow"
