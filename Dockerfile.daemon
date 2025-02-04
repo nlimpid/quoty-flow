@@ -20,4 +20,4 @@ COPY workspace_docker.yaml $DAGSTER_HOME/workspace.yaml
 
 WORKDIR $DAGSTER_HOME
 
-CMD ["dagster-daemon" "run"]
+CMD ["dagster-daemon", "run"]
