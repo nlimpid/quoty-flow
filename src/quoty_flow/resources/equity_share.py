@@ -19,11 +19,11 @@ class YahooFinanceResource(ConfigurableResource):
     """Yahoo Finance API 资源"""
 
     batch_size: int = 100
-    max_workers: int = 3
+    max_workers: int = 2
 
     def get_equity_shares(self, symbols: pd.Series, dt: str) -> pd.DataFrame:
         """获取股本数据"""
-        results = []
+        results = pd.DataFrame()
         # 分批处理
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = []
@@ -37,17 +37,17 @@ class YahooFinanceResource(ConfigurableResource):
             for future in futures:
                 try:
                     batch_results = future.result()
-                    results.extend(batch_results)
+                    results = pd.concat([results, batch_results], ignore_index=True)
                 except Exception as e:
                     logger.error(f"Error getting Yahoo Finance data: {e}")
 
         return results
 
-    def _get_batch_equity_shares(self, symbols: List[str], dt: str) -> pd.DataFrame:
+    def _get_batch_equity_shares(self, symbols: pd.Series, dt: str) -> pd.DataFrame:
         """获取一批股票的股本数据"""
         try:
             # Get data for batch of symbols
-            tickers = yf.Tickers(" ".join(symbols))
+            tickers = yf.Tickers(",".join(symbols))
 
             # 创建空的 DataFrame，预先定义好列
             df = pd.DataFrame(columns=["symbol", "shares", "source", "dt"])
@@ -125,7 +125,7 @@ class NasdaqScreenerResource(ConfigurableResource):
 
     async def _get_screener_data(
         self, limit: int = 100, offset: int = 0, client: httpx.AsyncClient = None
-    ) -> str:
+    ) -> pd.DataFrame:
         """获取 Nasdaq Screener 数据
 
         Args:

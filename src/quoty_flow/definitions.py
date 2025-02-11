@@ -1,5 +1,5 @@
 import pandas as pd
-from dagster import RunConfig, asset, Output, EnvVar, DailyPartitionsDefinition
+from dagster import asset, EnvVar, DailyPartitionsDefinition
 from dagster import AssetExecutionContext  # 新增导入
 from dagster import (  # type: ignore
     get_dagster_logger,
@@ -12,12 +12,10 @@ from dagster import (  # type: ignore
 )
 import os
 
+from src.quoty_flow.io_managers.motherduck import MotherDuckResource, raw_ipo_table
 from src.quoty_flow.resources.hkex import HKEXScraperResource
 from src.quoty_flow.assets.hkex import (
     check_bond_data_quality,
-    raw_bond_data,
-    staged_bond_data,
-    published_bond_data,
 )
 from src.quoty_flow.assets import hkex, equity_share
 
@@ -124,7 +122,7 @@ assets_modules = [
 # 定义代码库
 defs = Definitions(
     # assets=[*load_assets_from_modules([assets])],
-    assets=[*assets_modules, iris_dataset],
+    assets=[*assets_modules, iris_dataset, raw_ipo_table],
     asset_checks=[check_bond_data_quality],
     jobs=[debug_job],
     resources={
@@ -141,5 +139,6 @@ defs = Definitions(
         "yahoo_finance": YahooFinanceResource(batch_size=50, max_workers=10),
         # "nasdaq_screener": NasdaqScreenerResource(),
         "orbisfn": OrbisfnResource(),
+        "motherduck": MotherDuckResource(),
     },
 )

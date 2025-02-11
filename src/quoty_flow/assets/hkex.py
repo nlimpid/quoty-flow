@@ -8,7 +8,6 @@ from dagster import (
 )
 import pandas as pd
 from typing import List, Dict, Any
-from ..models.hkex import HKEXBondRate
 from ..resources.hkex import HKEXScraperResource  # 导入资源类
 
 
@@ -117,4 +116,86 @@ def published_bond_data(
     """发布已验证的数据到正式表"""
     context.resources.delta_io.write_table(
         staged_data, table_name="hkex_bonds", mode="overwrite"
+    )
+
+
+@asset(
+    required_resource_keys={"motherduck"},
+    description="Fetches raw IPO data from MotherDuck",
+)
+def raw_ipo_data(context: AssetExecutionContext) -> Output[pd.DataFrame]:
+    """从 MotherDuck 获取原始 IPO 数据"""
+    query = "SELECT * FROM main.raw_ipo"
+    df = context.resources.motherduck.execute_query(query)
+
+    return Output(
+        df,
+        metadata={
+            "record_count": len(df),
+            "preview": MetadataValue.md(df.head().to_markdown()),
+        },
+    )
+
+
+@asset(
+    required_resource_keys={"delta_io"},
+    description="Processes and writes IPO data to staging",
+    ins={"raw_data": AssetIn("raw_ipo_data")},
+)
+def staged_ipo_data(
+    context: AssetExecutionContext, raw_data: pd.DataFrame
+) -> pd.DataFrame:
+    """处理并写入临时表"""
+    # 数据清洗和转换
+    df = raw_data.copy()
+    df["ticker"] = df["ticker"].str.lstrip("0")
+
+    # 写入临时表
+    context.resources.delta_io.write_table(
+        df, table_name="ipo_staging", mode="overwrite"
+    )
+
+    return df
+
+
+@asset_check(asset=staged_ipo_data)
+def check_ipo_data_quality(context, df: pd.DataFrame) -> None:
+    """验证临时表数据质量"""
+    # 检查缺失值
+    missing_values = df.isnull().sum()
+    if missing_values.any():
+        context.fail(
+            description="Found missing values in data",
+            metadata={"missing_values": missing_values.to_dict()},
+        )
+
+    # 检查 ticker 格式（必须是数字字符串）
+    invalid_tickers = df[~df["ticker"].str.match(r"^\d+$")]["ticker"].tolist()
+    if invalid_tickers:
+        context.fail(
+            description="Found invalid ticker formats",
+            metadata={"invalid_tickers": invalid_tickers},
+        )
+
+    # 记录成功的检查结果
+    context.add_metadata(
+        metadata={
+            "total_records": len(df),
+            "unique_tickers": len(df["ticker"].unique()),
+            "ticker_length_stats": df["ticker"].str.len().describe().to_dict(),
+        }
+    )
+
+
+@asset(
+    required_resource_keys={"delta_io"},
+    description="Publishes validated IPO data",
+    ins={"staged_data": AssetIn("staged_ipo_data")},
+)
+def published_ipo_data(
+    context: AssetExecutionContext, staged_data: pd.DataFrame
+) -> None:
+    """发布已验证的数据到正式表"""
+    context.resources.delta_io.write_table(
+        staged_data, table_name="ipo", mode="overwrite"
     )

@@ -28,6 +28,7 @@ dependencies = [
     "dagster-aws",
     "pydantic",
     "yfinance",
+    "duckdb>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -49,7 +50,7 @@ python_files = ["test_*.py"]
 addopts = "-v"
 
 
-[tool.ruff.lint]
+[tool.ruff]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
